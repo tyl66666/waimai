@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -36,7 +39,7 @@ public class EmployeeController {
     private RedisTemplate redisTemplate;
 
 
-
+    //登入
     @PostMapping("/login")
     public Result<Employee> login(@RequestBody Employee employee){
         //获取前端传过来的密码 经行MD5加密
@@ -59,12 +62,42 @@ public class EmployeeController {
         }
 
         //将用户id存到redis中
-        redisTemplate.opsForValue().set(RedisConstant.EMPLOYEE_ID,emp.getId());
+        redisTemplate.opsForValue().set(RedisConstant.EMPLOYEE_ID,emp.getId(),RedisConstant.EMPLOYEE_TTL, TimeUnit.MINUTES);
         return Result.success(emp);
     }
 
+    //退出
+    @PostMapping("/logout")
+    public Result<String> logout(){
+        redisTemplate.delete(RedisConstant.EMPLOYEE_ID);
+        return Result.success("退出成功");
+    }
 
 
+    //新增员工
+    @PostMapping("")
+    public Result<String> save(@RequestBody Employee employee){
 
+        //判断用户名是否重复
+        String username = employee.getUsername();
+        LambdaQueryWrapper<Employee> wrapper=new LambdaQueryWrapper<>();
+        wrapper.eq(Employee::getUsername,username);
+        Employee emp = employeeService.getOne(wrapper);
+        if(emp!=null){
+            throw new RuntimeException("用户重复了");
+        }
 
+        employee.setPassword(DigestUtils.md5DigestAsHex("123456".getBytes(StandardCharsets.UTF_8)));
+
+        employee.setCreateTime(LocalDateTime.now());
+        employee.setUpdateTime(LocalDateTime.now());
+
+        Long  id = Long.valueOf(redisTemplate.opsForValue().get(RedisConstant.EMPLOYEE_ID).toString()) ;
+
+        employee.setCreateUser(id);
+        employee.setUpdateUser(id);
+
+        employeeService.save(employee);
+        return Result.success("添加成功");
+    }
 }
