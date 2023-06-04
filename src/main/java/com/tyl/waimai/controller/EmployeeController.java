@@ -2,6 +2,7 @@ package com.tyl.waimai.controller;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tyl.waimai.common.Result;
 import com.tyl.waimai.entity.Employee;
 import com.tyl.waimai.service.EmployeeService;
@@ -9,11 +10,8 @@ import com.tyl.waimai.utils.RedisConstant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.DigestUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLIntegrityConstraintViolationException;
@@ -57,7 +55,7 @@ public class EmployeeController {
         }
 
         //判断登入状态
-        if(emp.getId().equals(0)){
+        if(emp.getStatus().equals(0)){
             return Result.fail("此账号已被注销");
         }
 
@@ -75,7 +73,7 @@ public class EmployeeController {
 
 
     //新增员工
-    @PostMapping("")
+    @PostMapping
     public Result<String> save(@RequestBody Employee employee){
 
         //判断用户名是否重复
@@ -89,15 +87,38 @@ public class EmployeeController {
 
         employee.setPassword(DigestUtils.md5DigestAsHex("123456".getBytes(StandardCharsets.UTF_8)));
 
-        employee.setCreateTime(LocalDateTime.now());
-        employee.setUpdateTime(LocalDateTime.now());
-
-        Long  id = Long.valueOf(redisTemplate.opsForValue().get(RedisConstant.EMPLOYEE_ID).toString()) ;
-
-        employee.setCreateUser(id);
-        employee.setUpdateUser(id);
-
         employeeService.save(employee);
         return Result.success("添加成功");
     }
+
+    @GetMapping("/page")
+    public Result<Page> page(int page,int pageSize,String name){
+
+        //判断查询条件
+        LambdaQueryWrapper<Employee> wrapper=new LambdaQueryWrapper<>();
+        wrapper.like(name!=null,Employee::getName,name);
+        wrapper.orderByDesc(Employee::getUpdateTime);
+
+
+        Page<Employee> pageInfo=new Page(page,pageSize);
+
+        employeeService.page(pageInfo, wrapper);
+        return Result.success(pageInfo);
+    }
+
+    @PutMapping
+    public Result<String> update(@RequestBody Employee employee){
+        employeeService.updateById(employee);
+        return Result.success("更新成功");
+    }
+
+    @GetMapping("/{id}")
+    public Result<Employee> getById(@PathVariable Long id){
+        Employee employee = employeeService.getById(id);
+        if(employee!=null){
+            return Result.success(employee);
+        }
+        return  Result.fail("查无此人");
+    }
+
 }
