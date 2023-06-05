@@ -40,7 +40,7 @@ public class Result<T>  implements Serializable {
 
 
     public static <T> Result<T> fail(){
-        return new Result<T>(0,"fa  il",null);
+        return new Result<T>(0,"fail",null);
     }
 
     public static <T> Result<T> fail(Integer code){

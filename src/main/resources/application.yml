@@ -15,6 +15,7 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: assign_id  #表中未设自增 采用这个配置可以按照雪花算法自动生成id
-
+ruiji:
+  path: D:\
 
 
