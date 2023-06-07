@@ -40,7 +40,10 @@ public class LoginCheckFilter implements Filter {
                 "/employee/login",
                 "/employee/logout",
                 "/backend/**",
-                "/front/**"
+                "/front/**",
+                "/common/**",
+                "/user/sendMsg",
+                "/user/login"
         };
 
         boolean check = check(urls, requestURI);
@@ -50,11 +53,14 @@ public class LoginCheckFilter implements Filter {
             return;
         }
 
+        //TODO 还是得用ThreadLocal装
         Object o = redisTemplate.opsForValue().get(RedisConstant.EMPLOYEE_ID);
         if(o!=null&&o!=""){
             chain.doFilter(request,response);
             return;
         }
+
+        //TODO 写个前端登录过滤器
 
         response.getWriter().write(JSON.toJSONString(Result.fail("NOTLOGIN")));
     }
