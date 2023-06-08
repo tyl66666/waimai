@@ -83,6 +83,8 @@ public class UserController {
                  userService.save(u);
              }
 
+             redisTemplate.opsForValue().set(RedisConstant.USER_LOGIN_ID, use.getId());
+
 //             if(use.getStatus().equals(0)){
 //                 throw new RuntimeException("此账号已注销");
 //             }

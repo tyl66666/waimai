@@ -1,6 +1,7 @@
 package com.tyl.waimai.filter;
 
 import com.alibaba.fastjson.JSON;
+import com.tyl.waimai.common.BaseContext;
 import com.tyl.waimai.common.Result;
 import com.tyl.waimai.utils.RedisConstant;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,13 @@ public class LoginCheckFilter implements Filter {
         }
 
         //TODO 写个前端登录过滤器
+        Long o1 = (Long)redisTemplate.opsForValue().get(RedisConstant.USER_LOGIN_ID);
+        if(o1!=null){
+            BaseContext.setCurrentId(o1);
+            chain.doFilter(request,response);
+            return;
+        }
+
 
         response.getWriter().write(JSON.toJSONString(Result.fail("NOTLOGIN")));
     }
