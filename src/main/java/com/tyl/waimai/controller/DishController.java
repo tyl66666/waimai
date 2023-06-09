@@ -13,6 +13,8 @@ import com.tyl.waimai.service.DishFlavorService;
 import com.tyl.waimai.service.DishService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,6 +39,9 @@ public class DishController {
 
      @Autowired
      private DishFlavorService dishFlavorService;
+
+     @Autowired(required = false)
+     private RedisTemplate  redisTemplate;
 
       @PostMapping
       public Result<String> add(@RequestBody DishDto dishDto){
@@ -81,6 +86,9 @@ public class DishController {
 
     @PutMapping
     public Result<String> update(@RequestBody DishDto dishDto){
+          //删除缓存
+          String key="dish_"+dishDto.getCategoryId()+"_1";
+          redisTemplate.delete(key);
         dishService.updateWithFlavor(dishDto);
         return Result.success("修改成功","success");
     }
@@ -99,20 +107,29 @@ public class DishController {
 
     //根据id查询所有菜品
     //写完再看看
-      @GetMapping("/list")
-      public Result<List<DishDto>> list(Dish dish){
-    //构造查询条件
-    LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
-    queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
-    //添加条件，查询状态为1（起售状态）的菜品
-    queryWrapper.eq(Dish::getStatus,1);
+    @GetMapping("/list")
+    public Result<List<DishDto>> list(Dish dish){
+        List<DishDto> dishDtoList=null;
+
+          String key="dish_"+dish.getCategoryId()+"_"+ dish.getStatus();
+
+         dishDtoList = (List<DishDto>) redisTemplate.opsForValue().get(key);
+         if(!StringUtils.isEmpty(dishDtoList)){
+             return Result.success(dishDtoList);
+         }
+
+        //构造查询条件
+        LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
+        //添加条件，查询状态为1（起售状态）的菜品
+        queryWrapper.eq(Dish::getStatus,1);
 
     //添加排序条件
       queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
 
        List<Dish> list = dishService.list(queryWrapper);
 
-        List<DishDto> dishDtoList = list.stream().map((item) -> {
+       dishDtoList = list.stream().map((item) -> {
         DishDto dishDto = new DishDto();
 
         BeanUtils.copyProperties(item,dishDto);
@@ -136,6 +153,8 @@ public class DishController {
         return dishDto;
     }).collect(Collectors.toList());
 
+
+       redisTemplate.opsForValue().set(key,dishDtoList);
        return Result.success(dishDtoList);
     }
 }

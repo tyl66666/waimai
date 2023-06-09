@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @MapperScan("com.tyl.waimai.mapper")
 @ServletComponentScan
 @EnableTransactionManagement
+
 public class WaimaiApplication {
 
     public static void main(String[] args) {
